@@ -20,7 +20,7 @@ public class GlobalExceptionHandler {
 	private MessageSource messageSource;
 	
 	// for Exception class errors
-	@ExceptionHandler({Exception.class, RuntimeException.class, IOException.class})
+	@ExceptionHandler({Exception.class, IOException.class})
 	public String handleException(Exception e, Model model) {
 		log.info("ExceptionHandler: " + e.toString());
 		String errorMessage = messageSource.getMessage("error.general", null, LocaleContextHolder.getLocale());
