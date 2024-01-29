@@ -12,7 +12,6 @@ import com.woof.mapper.AccountMapper;
 
 import lombok.extern.java.Log;
 
-@Log
 @Service
 public class CustomUserDetailsService implements UserDetailsService {
 
@@ -21,12 +20,8 @@ public class CustomUserDetailsService implements UserDetailsService {
 
 	@Override
 	public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-		log.info("Load User By username : " + username);
-		// username은 사용자명이 아니라 사용자 아이디이다.
 		Account account = accountMapper.readByUsername(username);
-		log.info("queried by member mapper: " + account);
-
+		// check if retrieved account is null. if not null, create custom account; else return null
 		return account == null ? null : new CustomAccount(account);
 	}
-
 }

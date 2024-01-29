@@ -40,6 +40,7 @@ public class ItemController {
 	@Autowired
 	private ItemService itemService;
 	
+	// upload.path is the path to where images added from the site are stored. location is specified in application.properties (gitignored)
 	@Value("${upload.path}")
 	private String uploadPath;
 	

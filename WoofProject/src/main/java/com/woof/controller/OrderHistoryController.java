@@ -32,16 +32,19 @@ public class OrderHistoryController {
 	@Autowired
 	private OrderHistoryService orderHistoryService;
 	
+	// needed to retrieve user address information to store and display delivery address
 	@Autowired
 	private AccountService accountService;
 	
+	// needed to create list of ordered items when an order is made (getOrderHistory)
 	@Autowired 
 	private OrderItemService orderItemService; 
 	
+	// needed to remove items from the cart when an order is made (getOrderHistory)
 	@Autowired
 	private CartService cartService; 
 	
-	// ADMIN function - view order history details from service inquiry via AJAX
+	// ADMIN function - view order history details from service inquiry
 	@PreAuthorize("hasRole('ROLE_ADMIN')")
 	@GetMapping("/getOrderHistory")
 	public String getOrderHistory(String orderHistoryNo, Model model) throws Exception {

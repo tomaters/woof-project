@@ -27,9 +27,11 @@ public class NoticeController {
 	@Autowired
 	private NoticeService noticeService;
 
+	// retrieve kakaomap appkey in application.properties (gitignored)
 	@Value("${kakaomap.appkey}")
 	private String kakaoMapAppkey;
 
+	// get details of an announcement
 	@GetMapping("/getNotice")
 	public String getNotice(Notice notice, Model model) throws Exception {
 		log.info("getNotice");
@@ -38,6 +40,7 @@ public class NoticeController {
 		return "about/notice";
 	}
 
+	// get list of announcements
 	@GetMapping("/getNoticeList")
 	public String getNoticeList(Model model, PageRequest pageRequest,Pagination pagination) throws Exception {
 		log.info("getNoticeList");
@@ -49,7 +52,7 @@ public class NoticeController {
 			pageRequest.setKeyword("");
 		}
 
-		// 검색정보 Null Check
+		// null check for search information
 		switch (pageRequest.getCondition()) {
 		case "TITLE": {
 			pageRequest.setKeywordTitle(pageRequest.getKeyword());
@@ -62,20 +65,9 @@ public class NoticeController {
 			break;
 		}
 		}
-		log.info("pageRequest1 : "+pageRequest.toString());
-		log.info("pagination1 : "+pagination.toString());
 		pagination.setPageRequest(pageRequest);
-		log.info("pageRequest2 : "+pageRequest.toString());
-		log.info("pagination2 : "+pagination.toString());
-		
 		pagination.setTotalCount(noticeService.countNoticeList(pageRequest));
-		
-		log.info("pageRequest3 : "+pageRequest.toString());
-		log.info("pagination3 : "+pagination.toString());
-		
-		
 		model.addAttribute("pagination", pagination);
-		
 		
 		List<Notice> noticeList = noticeService.getNoticeList(pageRequest);
 		model.addAttribute("noticeList", noticeList);
@@ -83,35 +75,22 @@ public class NoticeController {
 		return "about/noticeList";
 	}
 
-	//공지사항 작성화면
+	// write an announcement (view)
 	@PreAuthorize("hasRole('ROLE_ADMIN')")
 	@GetMapping("/insertNoticeForm")
 	public String insertNoticeForm(Notice notice) throws Exception {
 		return "admin/notices/insertNotice";
 	}
 	
-	//공지사항 작성
+	// write an announcement (business logic)
 	@PreAuthorize("hasRole('ROLE_ADMIN')")
 	@PostMapping("/insertNotice")
 	public String insertNotice(Notice notice) throws Exception {
-		log.info("insertNotice");
-
 		noticeService.insertNotice(notice);
-
-//		// 샘플작성
-//		String title = notice.getNoticeTitle();
-//		String desc = notice.getNoticeDesc();
-//		for (int i = 0; i < 30; i++) {
-//			notice.setNoticeTitle(title + i);
-//			notice.setNoticeDesc(desc + i);
-//			noticeService.insertNotice(notice);
-//		}
-//		//샘플작성
-
 		return "redirect:/notice/getNoticeList";
 	}
 	
-	//공지사항 수정화면
+	//modify announcement (view)
 	@PreAuthorize("hasRole('ROLE_ADMIN')")
 	@PostMapping("/modifyNoticeForm")
 	public String modifyNoticeForm(Notice notice, Model model) throws Exception {
@@ -119,18 +98,16 @@ public class NoticeController {
 		return "admin/notices/modifyNotice";
 	}
 	
-	//공지사항 수정
+	//modify announcement (business logic)
 	@PreAuthorize("hasRole('ROLE_ADMIN')")
 	@PostMapping("/modifyNotice")
 	public String modifyNotice(Notice notice) throws Exception {
 		log.info("modifyNotice");
-
 		noticeService.modifyNotice(notice);
-
 		return "redirect:/notice/getNoticeList";
 	}
 	
-	//공지사항 삭제
+	// delete announcement
 	@PreAuthorize("hasRole('ROLE_ADMIN')")
 	@PostMapping("/deleteNotice")
 	public String deleteNotice(Notice notice) throws Exception {
@@ -138,14 +115,14 @@ public class NoticeController {
 		return "redirect:/notice/getNoticeList";
 	}
 	
-	//시설소개
+	// navigation for about page
 	@GetMapping("/getAbout")
 	public String getAbout(Model model, Search search) throws Exception {
 		log.info("getAbout");
 		return "about/about";
 	}
 	
-	//오시는길
+	// retrieve kakao appkey information to display in location page
 	@GetMapping("/getLocation")
 	public String getLocation(Model model, Search search) throws Exception {
 		log.info("getAbout");

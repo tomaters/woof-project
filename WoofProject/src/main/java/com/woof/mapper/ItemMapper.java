@@ -12,6 +12,7 @@ public interface ItemMapper {
 
 //	public List<Item> getItemList() throws Exception;
 	public List<Item> getItemList(PageRequest pageRequest) throws Exception;
+	
 	public List<Item> getMainItemList() throws Exception;
 	
 	public void insertItem(Item item) throws Exception;

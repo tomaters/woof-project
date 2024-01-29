@@ -19,6 +19,7 @@ import lombok.extern.java.Log;
 @RequestMapping("/orderItem")
 public class OrderItemController {
 
+	// OrderItem only has CREATE (OrderHistoryController) and READ; should not be able to change or delete purchase information
 	@Autowired
 	private OrderItemService orderItemService;
 	

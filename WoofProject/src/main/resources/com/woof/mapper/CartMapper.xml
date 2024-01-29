@@ -36,6 +36,8 @@
 			</foreach>
 	</delete>
 	
+	<!-- remove records where there are duplicate entries based on combination of username and itemNo\
+	subquery with ROW_NUMBER() identifies and deletes duplicates -->
 	<delete id="deleteDuplicateRows">
     DELETE FROM cart
     WHERE cartNo IN

@@ -23,7 +23,8 @@ import lombok.extern.java.Log;
 @Log
 @Controller
 public class HomeController {
-	
+
+	// autowire necessary service classes to retrieve Lists of objects to display in carousel / divs
 	@Autowired
 	private ItemService itemService;
 	
@@ -36,7 +37,7 @@ public class HomeController {
 	@Autowired
 	private ReviewService reviewService;
 	
-	@GetMapping("/")
+	@GetMapping("/") // empty url ending in / will redirect to home page
 	public String home(Locale locale, Model model, Account account) throws Exception {
 
 		List<Item> itemList = itemService.getMainItemList();

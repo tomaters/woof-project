@@ -1,5 +1,5 @@
 package com.woof.controller;
-
+ 
 import java.security.Principal;
 import java.util.List;
 import java.util.Map;
@@ -21,6 +21,7 @@ import com.woof.service.CartService;
 
 import lombok.extern.java.Log;
 
+// all current methods in /cart are MEMBER functions; non-members have no carts; no need for admin to make changes to users' carts
 @Log
 @Controller
 @RequestMapping("/cart")
@@ -28,29 +29,33 @@ public class CartController {
 
 	@Autowired
 	private CartService cartService;
-
+	
+	// add item to cart
 	@PreAuthorize("hasRole('ROLE_MEMBER')")
 	@PostMapping("/addToCart")
 	public String addToCart(@RequestParam("itemQuantity") int itemQuantity, Item item, Principal principal, Model model) throws Exception {
 		String username = principal.getName();
 		log.info("/addToCart POST: " + item + ", itemQuantity: " + itemQuantity + ", username: " + username);
-		String itemNo = String.valueOf(item.getItemNo()); 
+		// add item to cart. SQL trigger(before_cart_insert) adds quantity of duplicate items together
 		cartService.addToCart(item, username, itemQuantity);
+
+		// if the same item is added again, delete records with lower item quantity
+		String itemNo = String.valueOf(item.getItemNo()); 
 		cartService.deleteDuplicateRows(itemNo, username);
 		return "redirect:/cart/myCart";
 	}
 	
+	// view items in user cart
 	@PreAuthorize("hasRole('ROLE_MEMBER')")
 	@GetMapping("/myCart")
 	public String getCart(Principal principal, Model model) throws Exception {
 		String username = principal.getName();
-		log.info("/myCart GET: username: " + username);
-		// for test
 		List<Cart> cartList = cartService.getCart(username);
 		model.addAttribute("cartList", cartList);
 		return "account/myCart/myCart";
 	}
 	
+	// view items selected from cart to order
 	@PreAuthorize("hasRole('ROLE_MEMBER')")
 	@PostMapping("/getOrder")
 	public String getOrder(@RequestParam("selectedItems") List<String> selectedItems, Principal principal, Cart cart, Model model) throws Exception {
@@ -64,6 +69,7 @@ public class CartController {
 		return "account/myCart/myOrder";
 	}
 	
+	// function to calculate total price in myOrder.jsp
 	private int calculateTotalPrice(List<Cart> cartList) {
 		int totalPrice = 0;
 		for(Cart cart : cartList) {
@@ -73,7 +79,9 @@ public class CartController {
 		}
 		return totalPrice;
 	}
-
+	
+	// remove checked items from cart
+	@PreAuthorize("hasRole('ROLE_MEMBER')")
 	@PostMapping("/removeChecked")
 	public ResponseEntity<String> removeChecked(@RequestBody Map<String, Object> requestData, Principal principal) throws Exception {
 		log.info("/removeChecked POST requestBody: " + requestData.toString());
@@ -84,7 +92,9 @@ public class CartController {
 		cartService.removeChecked(selectedItems, username);
 		return ResponseEntity.ok("Items removed successfully");
 	}
-
+	
+	// remove single item from cart (AJAX)
+	@PreAuthorize("hasRole('ROLE_MEMBER')")
 	@PostMapping("/removeFromCart")
 	public ResponseEntity<String> removeFromCart(@RequestBody Map<String, Object> requestData, Principal principal) throws Exception {
 		log.info("/removeFromCart POST requestBody: " + requestData.toString());
@@ -95,12 +105,9 @@ public class CartController {
 		cartService.removeFromCart(itemNo, username);
 		return ResponseEntity.ok("Item removed successfully");
 	}
-	
-//	@RequestMapping("/changeCheckStatus")
-//	public void changeCheckStatus(Cart cart) throws Exception {
-//		cartService.changeCheckStatus(cart);
-//	}
-	
+
+	// change quantity of items in cart using < / > buttons (AJAX)
+	@PreAuthorize("hasRole('ROLE_MEMBER')")
 	@PostMapping("/modifyQuantity")
 	public ResponseEntity<String> modifyQuantity(@RequestBody Map<String, Object> requestData, Principal principal) throws Exception {
 		log.info("/modifyQuantity: requestData: " + requestData.toString());
@@ -113,4 +120,11 @@ public class CartController {
 		
 		return ResponseEntity.ok("Quantity updated");
 	}
+
+	/* potential implementation: store checked status of item into database to maintain checked items data
+	@RequestMapping("/changeCheckStatus")
+	public void changeCheckStatus(Cart cart) throws Exception {
+		cartService.changeCheckStatus(cart);
+	}
+	 */
 }

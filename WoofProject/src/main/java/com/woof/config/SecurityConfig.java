@@ -23,8 +23,15 @@ import com.zeus.common.security.CustomUserDetailsService;
 import lombok.extern.java.Log;
 
 @Log
+// @Configuration: class will define beans
 @Configuration
+// @EnableWebSecurity enables web security features from Spring Security
 @EnableWebSecurity
+/* 
+	@EnableMethodSecurity enables method-level security features
+	prePostEnabled true enables use of @PreAuthorize and @PostAuthorize security checks
+	securedEnabled true enables use of @Secured
+*/
 @EnableMethodSecurity(prePostEnabled = true, securedEnabled = true)
 public class SecurityConfig {
 	@Autowired
@@ -34,52 +41,50 @@ public class SecurityConfig {
 	SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 		log.info("SecurityFilterChain called");
 
-		// 토큰 비활성화
+		// disables CSRF protection
 		http.csrf().disable();
 
-		// 가입한 회원이 인가받지 않은 페이지에 접근하면 403 에러메세지를 /accessError로 대체한다 로그를 남김
+		// exceptions handled with GlobalExceptionHandler
+		// this would replace 403 error with redirect to /accessError
 //		http.exceptionHandling().accessDeniedHandler(createAccessDeniedHandler());
 
-		// 로그인설정
+		// configure login settings
 		http.formLogin().loginPage("/login").successHandler(createAuthenticationSuccessHandler()).failureUrl("/account/loginFail");
 		
-		// 로그아웃을 하면 자동 로그인에 사용하는 쿠키도 삭제한다
+		// when logging out, delete cookies used for automatic login
 		http.logout().logoutUrl("/account/logout").logoutSuccessUrl("/").invalidateHttpSession(true).deleteCookies("remember-me","JSESSION_ID");
 
-		// 쿠키의 유효 시간을 지정한다(24시간).
+		// set validity period of remember-me cookie to 24 hours
 		http.rememberMe().key("zeus").tokenRepository(createJDBCRepository()).tokenValiditySeconds(60 * 60 * 24 * 30);
 
 		return http.build();
 	}
 
+	// create JDBC-based persistent token repository
 	private PersistentTokenRepository createJDBCRepository() {
 		JdbcTokenRepositoryImpl repo = new JdbcTokenRepositoryImpl();
 		repo.setDataSource(dataSource);
 		return repo;
 	}
 	
+	// configure authentication manager with userDetailsService and password encoder
 	protected void configure(AuthenticationManagerBuilder auth) throws Exception {
 		auth.userDetailsService(createUserDetailsService()).passwordEncoder(createPasswordEncoder());
 	}
 	
+	// create and return a BCrypt password encoder
 	@Bean
 	PasswordEncoder createPasswordEncoder() {
 		return new BCryptPasswordEncoder();
 	}
 	
-	// 스프링 시큐리티의 UserDetailsService를 구현한 클래스를 빈으로 등록한다. [사용자정보 비교]
+	// register class implementing UserDetailsService interface from Spring Security
 	@Bean
 	UserDetailsService createUserDetailsService() { 
 		return new CustomUserDetailsService();
 	}
 		
-	// CustomAccessDeniedHandler를 빈으로 등록한다.
-//	@Bean
-//	AccessDeniedHandler createAccessDeniedHandler() {
-//		return new CustomAccessDeniedHandler();
-//	}
-		
-	// CustomLoginSuccessHandler를 빈으로 등록한다.
+	// register CustomLoginSuccessHandler as a bean
 	@Bean
 	AuthenticationSuccessHandler createAuthenticationSuccessHandler() {
 		return new CustomLoginSuccessHandler();

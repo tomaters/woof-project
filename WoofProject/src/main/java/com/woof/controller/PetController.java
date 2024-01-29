@@ -40,9 +40,11 @@ public class PetController {
 	@Autowired
 	private PetService service;
 
+	// image files storage path (gitignored)
 	@Value("${upload.path}")
 	private String uploadPath;
 
+	// get specific pet information
 	@GetMapping("/getPet")
 	public String getPet(Pet pet, Model model) throws Exception {
 		Pet pet_ = service.getPet(pet);
@@ -50,28 +52,21 @@ public class PetController {
 		return "pet/pet";
 	}
 
+	// get specific pet information
 	@PostMapping("/getPet")
 	public void getPetList(Pet pet) throws Exception {
 		log.info("/getPet POST");
 		service.getPet(pet);
 	}
 
+	// get list of pets
 	@GetMapping("/getPetList")
 	public String getPetList(Pet pet, Model model, PageRequest pageRequest, Pagination pagination, @AuthenticationPrincipal UserDetails userDetails) throws Exception {
-		
-		// 분양 신청 권한 표시
-//		if(null!=userDetails) {
-//			String authList = userDetails.getAuthorities().toString();
-//			model.addAttribute("authList", authList);
-//		};
-
 		if (null == pageRequest.getKeyword()) {
 			pageRequest.setKeyword("");
 		}
-
 		pageRequest.setSizePerPage(9);
 		pagination.setPageRequest(pageRequest);
-//		log.info("getPetList().size() : "+service.getPetList().size());
 		pagination.setTotalCount(service.countPetList(pageRequest));
 		log.info("pagination : " + pagination.toString());
 		model.addAttribute("pagination", pagination);
@@ -87,12 +82,14 @@ public class PetController {
 		model.addAttribute("petList", petList);
 	}
 
+	// ADMIN: insert pet (view)
 	@PreAuthorize("hasRole('ROLE_ADMIN')")
 	@GetMapping("/insertPet")
 	public String insertPetForm(Pet pet) throws Exception {
 		return "pet/insertPet";
 	}
 
+	// ADMIN: insert pet (view)
 	@PreAuthorize("hasRole('ROLE_ADMIN')")
 	@GetMapping("/pet/insertPet")
 	public void insertPet(Model model) throws Exception {
@@ -100,6 +97,7 @@ public class PetController {
 		model.addAttribute(new Pet());
 	}
 
+	// ADMIN: insert pet (business logic)
 	@PreAuthorize("hasRole('ROLE_ADMIN')")
 	@PostMapping("/insertPet")
 	public String insertPet(Pet pet) throws Exception {
@@ -107,9 +105,6 @@ public class PetController {
 		List<MultipartFile> pictures = pet.getPictures();
 		for (int i = 0; i < pictures.size(); i++) {
 			MultipartFile file = pictures.get(i);
-//			log.info("originalName" + file.getOriginalFilename());
-//			log.info("size:" + file.getSize());
-//			log.info("contentType:" + file.getContentType());
 			String savedName = uploadFile(file.getOriginalFilename(), file.getBytes());
 			if (i == 0) {
 				pet.setPetMainPic(savedName);
@@ -117,38 +112,22 @@ public class PetController {
 				pet.setPetSubPic(savedName);
 			}
 		}
-		log.info(pet.toString());
-
-//		String petname = pet.getPetName();
-//		for(int i=0;i<pet.getPetNo();i++) {
-//			pet.setPetName(petname+i);
-//			service.insertPet(pet);			
-//		}
 		service.insertPet(pet);
 
 		return "redirect:/pet/getPetList";
 	}
 
-	private String uploadFile(String originalName, byte[] fileData) throws Exception {
-		log.info("UploadFile()");
-		UUID uid = UUID.randomUUID();
-		String savedName = uid.toString() + "_" + originalName;
-		File target = new File(uploadPath, savedName);
-		FileCopyUtils.copy(fileData, target);
-		return savedName;
-	}
-
+	// ADMIN: modify pet (view)
 	@PreAuthorize("hasRole('ROLE_ADMIN')")
 	@GetMapping("/modifyPet")
 	public String modifyPet(Pet pet, Model model) throws Exception {
 		log.info("/modifyPet GET");
 		Pet petModify = this.service.getPet(pet);
-//		log.info(petModify.toString());
 		model.addAttribute(petModify);
-//		log.info("model add attribute ");
 		return "pet/modifyPet";
 	}
 
+	// ADMIN: modify pet (business logic)
 	@PreAuthorize("hasRole('ROLE_ADMIN')")
 	@PostMapping("/modifyPet")
 	public String modify(Pet pet, Model model) throws Exception {
@@ -166,10 +145,11 @@ public class PetController {
 			}
 		}
 		this.service.modifyPet(pet);
-		model.addAttribute("수정이 완료되었습니다.");
+		model.addAttribute("Modified");
 		return "redirect:/pet/getPetList";
 	}
 
+	// ADMIN: delete pet
 	@PreAuthorize("hasRole('ROLE_ADMIN')")
 	@GetMapping("/deletePet")
 	public String deletePet(Pet pet, Model model) throws Exception {
@@ -177,20 +157,19 @@ public class PetController {
 		return "redirect:/pet/getPetList";
 	}
 
+	// search by pet type
 	@RequestMapping("/searchPetType")
 	public void searchPetType(Pet pet) throws Exception {
 		service.searchPetType(pet);
 	}
 
-//----------------------------사진 업로드----------------------------------
-
+	// rest of methods are for displaying pictures
 	@ResponseBody
 	@GetMapping("/getPetMainPic")
 	public ResponseEntity<byte[]> getPetMainPic(Integer petNo) throws Exception {
 		InputStream in = null;
 		ResponseEntity<byte[]> entity = null;
 		String fileName = service.getPetMainPic(petNo);
-//		log.info(fileName);
 		try {
 			String formatName = fileName.substring(fileName.lastIndexOf(".") + 1);
 			MediaType mType = getMediaType(formatName);
@@ -235,7 +214,6 @@ public class PetController {
 	}
 
 	private MediaType getMediaType(String formatName) {
-//		log.info("getMediaType()");
 		if (formatName != null) {
 			if (formatName.equals("JPG")) {
 				return MediaType.IMAGE_JPEG;
@@ -248,5 +226,13 @@ public class PetController {
 			}
 		}
 		return null;
+	}
+	
+	private String uploadFile(String originalName, byte[] fileData) throws Exception {
+		UUID uid = UUID.randomUUID();
+		String savedName = uid.toString() + "_" + originalName;
+		File target = new File(uploadPath, savedName);
+		FileCopyUtils.copy(fileData, target);
+		return savedName;
 	}
 }

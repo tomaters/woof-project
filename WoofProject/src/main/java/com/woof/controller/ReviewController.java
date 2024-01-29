@@ -44,46 +44,39 @@ import lombok.extern.java.Log;
 @RequestMapping("/review")
 public class ReviewController {
 
+	// for pagination; set number of reviews in a page
+	private final int SIZE_PER_PAGE = 8;
+	
 	@Autowired
 	private ReviewService service;
 
 	@Value("${upload.path}")
 	private String uploadPath;
 
+	// get specific review information (view)
 	@GetMapping("/getReview")
 	public String getReview(Review review, Model model, Principal principal, Account account) throws Exception {
 		if (null != principal) {
 			account.setUsername(principal.getName());
-//			log.info(principal.getName());
 			model.addAttribute(account);
 		}
 		Review review_ = service.getReview(review);
 		model.addAttribute("review", review_);
 		return "pet/petReview";
 	}
+	// get specific review information (business logic)
 
 	@PostMapping("/getReview")
 	public void getReview(Review review, Model model) throws Exception {
-		log.info("/getReview POST");
 		service.getReview(review);
 	}
-
-//	@RequestMapping(value = "/getReviewList")
-//	public String getReviewList(Review review, Model model) throws Exception {
-//		log.info("getReviewList");
-//		List<Review> reviewList = service.getReviewList();
-//		model.addAttribute("reviewList", reviewList);
-//		log.info(reviewList.toString());
-//		return "pet/petReviewList";
-//	}
 	
+	// get list of reviews
 	@GetMapping("/getReviewList")
 	public String getReviewList(Model model,PageRequest pageRequest,Pagination pagination) throws Exception{
 		log.info("getReviewList");
 		
-//		pagination.setDisplayPageNum(5);
-		pageRequest.setSizePerPage(8);
-		
+		pageRequest.setSizePerPage(SIZE_PER_PAGE);
 		if(pageRequest.getCondition() == null) {
 			pageRequest.setCondition("TITLE");
 		}
@@ -91,7 +84,6 @@ public class ReviewController {
 			pageRequest.setKeyword("");
 		}
 		
-		//검색 정보 null check
 		switch (pageRequest.getCondition()) {
 		case "TITLE":{
 			pageRequest.setKeywordTitle(pageRequest.getKeyword());
@@ -104,7 +96,7 @@ public class ReviewController {
 			break;
 		}
 		}
-		pageRequest.setSizePerPage(8);
+		pageRequest.setSizePerPage(SIZE_PER_PAGE);
 		log.info(pageRequest.toString());
 		pagination.setPageRequest(pageRequest);
 		pagination.setTotalCount(service.countReviewList(pageRequest));
@@ -114,22 +106,24 @@ public class ReviewController {
 		
 		return "pet/petReviewList";
 	}
-	
-//	내정보
+	 
+	// MEMBER: write a review (view)
+	@PreAuthorize("hasAnyRole('ROLE_MEMBER')")
 	@GetMapping("/insertReviewForm")
 	public String ReviewForm(Review review, Model model, Principal principal) throws Exception {
-		log.info("myAccountForm");
-//		log.info("...principal.getName : " + principal.getName());
 		review.setUsername(principal.getName());
 		return "pet/insertPetReview";
 	}
 
+	@PreAuthorize("hasAnyRole('ROLE_MEMBER')")
 	@GetMapping("/pet/insertReview")
 	public void insertReview(Model model) throws Exception {
 		log.info("/pet/insertPetReview GET");
 		model.addAttribute(new Review());
 	}
 
+	// MEMBER: write a review (business logic)
+	@PreAuthorize("hasAnyRole('ROLE_MEMBER')")
 	@PostMapping("/insertReview")
 	public String insertReview(Review review) throws Exception {
 		log.info("/insertReview POST");
@@ -140,24 +134,11 @@ public class ReviewController {
 		List<MultipartFile> pictures = review.getPictures();
 		for (int i = 0; i < pictures.size(); i++) {
 			MultipartFile file = pictures.get(i);
-//			log.info("originalName" + file.getOriginalFilename());
-//			log.info("size:" + file.getSize());
-//			log.info("contentType:" + file.getContentType());
 			String savedName = uploadFile(file.getOriginalFilename(), file.getBytes());
 			if (i == 0) {
 				review.setReviewPic(savedName);
 			}
-
 		}
-		log.info("reviewtoString : "+review.toString());
-		
-//////////////////////////////// 반복문 샘플 작성
-//		String title =review.getReviewTitle();
-//		for(int i=0;i<30;i++) {
-//		review.setReviewTitle(title+i);
-//		service.insertReview(review);
-//		}
-		
 		service.insertReview(review);
 		if(review.getItemNo()>0) {
 			 return "redirect:/orderHistory/getOrderHistoryList";
@@ -166,24 +147,18 @@ public class ReviewController {
 		return "redirect:/review/getReviewList";
 	}
 
-	private String uploadFile(String originalName, byte[] fileData) throws Exception {
-		log.info("UploadFile()");
-		UUID uid = UUID.randomUUID();
-		String savedName = uid.toString() + "_" + originalName;
-		File target = new File(uploadPath, savedName);
-		FileCopyUtils.copy(fileData, target);
-		return savedName;
-	}
+
+	// modify a review (only for members or admin; view)
 	@PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_MEMBER')")
 	@GetMapping("/modifyReview")
 	public String modifyReivew(Review reivew, Model model) throws Exception {
 		log.info("/modifyPetReview GET");
 		Review reviewModify = this.service.getReview(reivew);
-//		log.info(reviewModify.toString());
 		model.addAttribute(reviewModify);
-//		log.info("model add attribute");
 		return "pet/modifyPetReview";
 	}
+	
+	// modify a review (only for members or admin; business logic)
 	@PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_MEMBER')")
 	@PostMapping("/modifyReview")
 	public String modify(Review review,Model model)throws Exception{
@@ -199,27 +174,100 @@ public class ReviewController {
 			}
 		}
 		this.service.modifyReview(review);
-		model.addAttribute("수정이 완료 되었습니다.");
+		model.addAttribute("Modified");
 		return "redirect:/review/getReviewList";
 	}
+	
+	// delete a review (only for members or admin)
 	@PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_MEMBER')")
 	@GetMapping(value = "/deleteReview")
 	public String deleteReview(Review review,Model model) throws Exception{
 		this.service.deleteReview(review);
 		return "redirect:/review/getReviewList";
 	}
-	
-	
-	
-	//----------------------------사진 업로드----------------------------------
 
+	// get item review list
+	@PutMapping("/getItemReviewList")
+	public ResponseEntity<List> getItemReviewList(@RequestBody PageRequest pageRequest, Pagination pagination)
+			throws Exception {
+		log.info("getItemReviewList");
+
+		pagination.setPageRequest(pageRequest);
+		pagination.setTotalCount(service.countItemReviewList(pageRequest));
+
+		List<Review> reviewList = service.getItemReviewList(pageRequest);
+		ResponseEntity<List> entity = null;
+		if (reviewList.size() != 0) {
+			entity = new ResponseEntity<List>(reviewList, HttpStatus.OK);
+			log.info("reviewList : " + reviewList.toString());
+		}
+		return entity;
+	}
+	
+	@PutMapping("/getItemReviewPagination")
+	public ResponseEntity<List> getItemReviewPagination(@RequestBody PageRequest pageRequest, Pagination pagination)
+			throws Exception {
+		log.info("getItemReviewPagination");
+		log.info("pageRequest1 : " + pageRequest.toString());
+
+		pagination.setPageRequest(pageRequest);
+		pagination.setTotalCount(service.countItemReviewList(pageRequest));
+		log.info("pagination3 : " + pagination.toString());
+		log.info("pageRequest3 : " + pageRequest.toString());
+		List<Pagination> pageList = new ArrayList<Pagination>();
+		pageList.add(pagination);
+
+		ResponseEntity<List> entity = new ResponseEntity<List>(pageList, HttpStatus.OK);
+		return entity;
+	}
+	
+	// delete review (only for admin or members; AJAX)
+	@PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_MEMBER')")
+	@PutMapping("/deleteReviewAjax")
+	public ResponseEntity<List> deleteReviewAjax(@RequestBody Review review) throws Exception {
+		service.deleteReview(review);
+		ResponseEntity<List> entity = null;
+		return entity;
+	}
+	
+
+	// MEMBER - insert an item review (view)
+	@PostMapping("/insertItemReviewForm")
+	public String insertItemReviewForm(Model model, Principal principal, Account account,Review review) throws Exception {
+		log.info("insertItemReviewForm");
+		log.info("review : " +review.toString());
+		if (null != principal) {
+			account.setUsername(principal.getName());
+			log.info(principal.getName());
+			model.addAttribute(account);
+			model.addAttribute(review);
+		}
+		return "item/insertItemReview";
+	}
+	
+	// MEMBER - insert an item review (business logic)
+	@PostMapping("/insertItemReview")
+	public String insertItemReview() {
+		log.info("insertItemReview");
+		return "redirect:/reply/getItemReviewList";
+	}
+	
+	// remaining methods for uploading and retrieving images
+	private String uploadFile(String originalName, byte[] fileData) throws Exception {
+		log.info("UploadFile()");
+		UUID uid = UUID.randomUUID();
+		String savedName = uid.toString() + "_" + originalName;
+		File target = new File(uploadPath, savedName);
+		FileCopyUtils.copy(fileData, target);
+		return savedName;
+	}
+	
 	@ResponseBody
 	@GetMapping("/getReviewPic")
 	public ResponseEntity<byte[]> getReviewPic(Integer reviewNo) throws Exception {
 		InputStream in = null;
 		ResponseEntity<byte[]> entity = null;
 		String fileName = service.getReviewPic(reviewNo);
-//		log.info(fileName);
 		try {
 			String formatName = fileName.substring(fileName.lastIndexOf(".") + 1);
 			MediaType mType = getMediaType(formatName);
@@ -239,7 +287,6 @@ public class ReviewController {
 	}
 	
 	private MediaType getMediaType(String formatName) {
-//		log.info("getMediaType()");
 		if (formatName != null) {
 			if (formatName.equals("JPG")) {
 				return MediaType.IMAGE_JPEG;
@@ -253,70 +300,5 @@ public class ReviewController {
 		}
 		return null;
 	}
-	
-	
-	//===================================AJAX
-	
-	@PutMapping(value = "/getItemReviewList")
-	public ResponseEntity<List> getItemReviewList(@RequestBody PageRequest pageRequest, Pagination pagination)
-			throws Exception {
-		log.info("getItemReviewList");
-
-		pagination.setPageRequest(pageRequest);
-		pagination.setTotalCount(service.countItemReviewList(pageRequest));
-
-//		log.info("pagination3 : " + pagination.toString());
-//		log.info("pageRequest3 : " + pageRequest.toString());
-
-		List<Review> reviewList = service.getItemReviewList(pageRequest);
-		ResponseEntity<List> entity = null;
-		if (reviewList.size() != 0) {
-			entity = new ResponseEntity<List>(reviewList, HttpStatus.OK);
-			log.info("reviewList : " + reviewList.toString());
-		}
-		return entity;
-	}
-	
-	@PutMapping(value = "/getItemReviewPagination")
-	public ResponseEntity<List> getItemReviewPagination(@RequestBody PageRequest pageRequest, Pagination pagination)
-			throws Exception {
-		log.info("getItemReviewPagination");
-		log.info("pageRequest1 : " + pageRequest.toString());
-
-		pagination.setPageRequest(pageRequest);
-		pagination.setTotalCount(service.countItemReviewList(pageRequest));
-		log.info("pagination3 : " + pagination.toString());
-		log.info("pageRequest3 : " + pageRequest.toString());
-		List<Pagination> pageList = new ArrayList<Pagination>();
-		pageList.add(pagination);
-
-		ResponseEntity<List> entity = new ResponseEntity<List>(pageList, HttpStatus.OK);
-		return entity;
-	}
-	
-	@PutMapping("/deleteReviewAjax")
-	public ResponseEntity<List> deleteReviewAjax(@RequestBody Review review) throws Exception {
-		service.deleteReview(review);
-		ResponseEntity<List> entity = null;
-		return entity;
-	}
-	
-	@PostMapping("/insertItemReviewForm")
-	public String insertItemReviewForm(Model model, Principal principal, Account account,Review review) throws Exception {
-		log.info("insertItemReviewForm");
-		log.info("review : " +review.toString());
-		if (null != principal) {
-			account.setUsername(principal.getName());
-			log.info(principal.getName());
-			model.addAttribute(account);
-			model.addAttribute(review);
-		}
-		return "item/insertItemReview";
-	}
-	
-	@PostMapping("/insertItemReview")
-	public String insertItemReview() {
-		log.info("insertItemReview");
-		return "redirect:/reply/getItemReviewList";
-	}
 }
+
